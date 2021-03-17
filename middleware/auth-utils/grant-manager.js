@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-'use strict';
+"use strict";
 
-const URL = require('url');
-const http = require('http');
-const https = require('https');
-const crypto = require('crypto');
-const querystring = require('querystring');
-const Grant = require('./grant');
-const Token = require('./token');
-var Rotation = require('./rotation');
+const URL = require("url");
+const http = require("http");
+const https = require("https");
+const crypto = require("crypto");
+const querystring = require("querystring");
+const Grant = require("./grant");
+const Token = require("./token");
+var Rotation = require("./rotation");
 
 /**
  * Construct a grant manager.
@@ -31,7 +31,7 @@ var Rotation = require('./rotation');
  *
  * @constructor
  */
-function GrantManager (config) {
+function GrantManager(config) {
   this.realmUrl = config.realmUrl;
   this.clientId = config.clientId;
   this.secret = config.secret;
@@ -57,14 +57,18 @@ function GrantManager (config) {
  * @param {String} password The cleartext password.
  * @param {Function} callback Optional callback, if not using promises.
  */
-GrantManager.prototype.obtainDirectly = function obtainDirectly (username, password,
-  callback, scopeParam) {
+GrantManager.prototype.obtainDirectly = function obtainDirectly(
+  username,
+  password,
+  callback,
+  scopeParam
+) {
   const params = {
     client_id: this.clientId,
     username: username,
     password: password,
-    grant_type: 'password',
-    scope: scopeParam || 'openid'
+    grant_type: "password",
+    scope: scopeParam || "openid",
   };
   const handler = createHandler(this);
   const options = postOptions(this);
@@ -89,14 +93,20 @@ GrantManager.prototype.obtainDirectly = function obtainDirectly (username, passw
  * @param {String} sessionHost Optional session host for targetted Keycloak console post-backs.
  * @param {Function} callback Optional callback, if not using promises.
  */
-GrantManager.prototype.obtainFromCode = function obtainFromCode (request, code, sessionId, sessionHost, callback) {
+GrantManager.prototype.obtainFromCode = function obtainFromCode(
+  request,
+  code,
+  sessionId,
+  sessionHost,
+  callback
+) {
   const params = {
     client_session_state: sessionId,
     client_session_host: sessionHost,
     code: code,
-    grant_type: 'authorization_code',
+    grant_type: "authorization_code",
     client_id: this.clientId,
-    redirect_uri: request.session ? request.session.auth_redirect_uri : {}
+    redirect_uri: request.session ? request.session.auth_redirect_uri : {},
   };
   const handler = createHandler(this);
   const options = postOptions(this);
@@ -104,9 +114,13 @@ GrantManager.prototype.obtainFromCode = function obtainFromCode (request, code, 
   return nodeify(fetch(this, handler, options, params), callback);
 };
 
-GrantManager.prototype.checkPermissions = function obtainPermissions (authzRequest, request, callback) {
+GrantManager.prototype.checkPermissions = function obtainPermissions(
+  authzRequest,
+  request,
+  callback
+) {
   const params = {
-    grant_type: 'urn:ietf:params:oauth:grant-type:uma-ticket'
+    grant_type: "urn:ietf:params:oauth:grant-type:uma-ticket",
   };
 
   if (authzRequest.audience) {
@@ -127,22 +141,34 @@ GrantManager.prototype.checkPermissions = function obtainPermissions (authzReque
   const options = postOptions(this);
 
   if (this.public) {
-    if (request.kauth && request.kauth.grant && request.kauth.grant.access_token) {
-      options.headers.Authorization = 'Bearer ' + request.kauth.grant.access_token.token;
+    if (
+      request.kauth &&
+      request.kauth.grant &&
+      request.kauth.grant.access_token
+    ) {
+      options.headers.Authorization =
+        "Bearer " + request.kauth.grant.access_token.token;
     }
   } else {
     let header = request.headers.authorization;
     let bearerToken;
 
-    if (header && (header.indexOf('bearer ') === 0 || header.indexOf('Bearer ') === 0)) {
+    if (
+      header &&
+      (header.indexOf("bearer ") === 0 || header.indexOf("Bearer ") === 0)
+    ) {
       bearerToken = header.substring(7);
     }
 
     if (!bearerToken) {
-      if (request.kauth && request.kauth.grant && request.kauth.grant.access_token) {
+      if (
+        request.kauth &&
+        request.kauth.grant &&
+        request.kauth.grant.access_token
+      ) {
         bearerToken = request.kauth.grant.access_token.token;
       } else {
-        return Promise.reject(new Error('No bearer in header'));
+        return Promise.reject(new Error("No bearer in header"));
       }
     }
 
@@ -160,12 +186,12 @@ GrantManager.prototype.checkPermissions = function obtainPermissions (authzReque
     var permission = resource.id;
 
     if (resource.scopes && resource.scopes.length > 0) {
-      permission += '#';
+      permission += "#";
 
       for (let j = 0; j < resource.scopes.length; j++) {
         var scope = resource.scopes[j];
-        if (permission.indexOf('#') !== permission.length - 1) {
-          permission += ',';
+        if (permission.indexOf("#") !== permission.length - 1) {
+          permission += ",";
         }
         permission += scope;
       }
@@ -182,7 +208,10 @@ GrantManager.prototype.checkPermissions = function obtainPermissions (authzReque
 
   var handler = (resolve, reject, json) => {
     try {
-      if (authzRequest.response_mode === 'decision' || authzRequest.response_mode === 'permissions') {
+      if (
+        authzRequest.response_mode === "decision" ||
+        authzRequest.response_mode === "permissions"
+      ) {
         callback(JSON.parse(json));
       } else {
         resolve(manager.createGrant(json));
@@ -203,11 +232,14 @@ GrantManager.prototype.checkPermissions = function obtainPermissions (authzReque
  *
  * @param {Function} callback Optional callback, if not using promises.
  */
-GrantManager.prototype.obtainFromClientCredentials = function obtainFromlientCredentials (callback, scopeParam) {
+GrantManager.prototype.obtainFromClientCredentials = function obtainFromlientCredentials(
+  callback,
+  scopeParam
+) {
   const params = {
-    grant_type: 'client_credentials',
-    scope: scopeParam || 'openid',
-    client_id: this.clientId
+    grant_type: "client_credentials",
+    scope: scopeParam || "openid",
+    client_id: this.clientId,
   };
   const handler = createHandler(this);
   const options = postOptions(this);
@@ -232,23 +264,32 @@ GrantManager.prototype.obtainFromClientCredentials = function obtainFromlientCre
  * @param {Grant} grant The grant object to ensure freshness of.
  * @param {Function} callback Optional callback if promises are not used.
  */
-GrantManager.prototype.ensureFreshness = function ensureFreshness (grant, callback) {
+GrantManager.prototype.ensureFreshness = function ensureFreshness(
+  grant,
+  callback
+) {
   if (!grant.isExpired()) {
     return nodeify(Promise.resolve(grant), callback);
   }
 
   if (!grant.refresh_token) {
-    return nodeify(Promise.reject(new Error('Unable to refresh without a refresh token')), callback);
+    return nodeify(
+      Promise.reject(new Error("Unable to refresh without a refresh token")),
+      callback
+    );
   }
 
   if (grant.refresh_token.isExpired()) {
-    return nodeify(Promise.reject(new Error('Unable to refresh with expired refresh token')), callback);
+    return nodeify(
+      Promise.reject(new Error("Unable to refresh with expired refresh token")),
+      callback
+    );
   }
 
   const params = {
-    grant_type: 'refresh_token',
+    grant_type: "refresh_token",
     refresh_token: grant.refresh_token.token,
-    client_id: this.clientId
+    client_id: this.clientId,
   };
   const handler = refreshHandler(this, grant);
   const options = postOptions(this);
@@ -264,63 +305,71 @@ GrantManager.prototype.ensureFreshness = function ensureFreshness (grant, callba
  *
  * @return {boolean} `false` if the token is invalid, or the same token if valid.
  */
-GrantManager.prototype.validateAccessToken = function validateAccessToken (token, callback) {
+GrantManager.prototype.validateAccessToken = function validateAccessToken(
+  token,
+  callback
+) {
   let t = token;
-  if (typeof token === 'object') {
+  if (typeof token === "object") {
     t = token.token;
   }
   const params = {
     token: t,
     client_secret: this.secret,
-    client_id: this.clientId
+    client_id: this.clientId,
   };
-  const options = postOptions(this, '/protocol/openid-connect/token/introspect');
+  const options = postOptions(
+    this,
+    "/protocol/openid-connect/token/introspect"
+  );
   const handler = validationHandler(this, token);
 
   return nodeify(fetch(this, handler, options, params), callback);
 };
 
-GrantManager.prototype.userInfo = function userInfo (token, callback) {
-  const url = this.realmUrl + '/protocol/openid-connect/userinfo';
+GrantManager.prototype.userInfo = function userInfo(token, callback) {
+  const url = this.realmUrl + "/protocol/openid-connect/userinfo";
   const options = URL.parse(url);
-  options.method = 'GET';
+  options.method = "GET";
 
   let t = token;
-  if (typeof token === 'object') t = token.token;
+  if (typeof token === "object") t = token.token;
 
   options.headers = {
-    'Authorization': 'Bearer ' + t,
-    'Accept': 'application/json',
-    'X-Client': 'keycloak-nodejs-connect'
+    Authorization: "Bearer " + t,
+    Accept: "application/json",
+    "X-Client": "keycloak-nodejs-connect",
   };
 
   const promise = new Promise((resolve, reject) => {
     const req = getProtocol(options).request(options, (response) => {
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        return reject(new Error('Error fetching account'));
+        return reject(new Error("Error fetching account"));
       }
-      let json = '';
-      response.on('data', (d) => (json += d.toString()));
-      response.on('end', () => {
+      let json = "";
+      response.on("data", (d) => (json += d.toString()));
+      response.on("end", () => {
         const data = JSON.parse(json);
         if (data.error) reject(data);
         else resolve(data);
       });
     });
-    req.on('error', reject);
+    req.on("error", reject);
     req.end();
   });
 
   return nodeify(promise, callback);
 };
 
-GrantManager.prototype.getAccount = function getAccount () {
-  console.error('GrantManager#getAccount is deprecated. See GrantManager#userInfo');
+GrantManager.prototype.getAccount = function getAccount() {
+  console.error(
+    "GrantManager#getAccount is deprecated. See GrantManager#userInfo"
+  );
   return this.userInfo.apply(this, arguments);
 };
 
-GrantManager.prototype.isGrantRefreshable = function isGrantRefreshable (grant) {
-  return !this.bearerOnly && (grant && grant.refresh_token);
+GrantManager.prototype.isGrantRefreshable = function isGrantRefreshable(grant) {
+  return !this.bearerOnly && grant && grant.refresh_token;
 };
 
 /**
@@ -334,25 +383,29 @@ GrantManager.prototype.isGrantRefreshable = function isGrantRefreshable (grant) 
  * @param {String} rawData The raw JSON string received from the Keycloak server or from a client.
  * @return {Promise} A promise reoslving a grant.
  */
-GrantManager.prototype.createGrant = function createGrant (rawData) {
+GrantManager.prototype.createGrant = function createGrant(rawData) {
   let grantData = rawData;
-  if (typeof rawData !== 'object') grantData = JSON.parse(grantData);
+  if (typeof rawData !== "object") grantData = JSON.parse(grantData);
 
   const grant = new Grant({
-    access_token: (grantData.access_token ? new Token(grantData.access_token, this.clientId) : undefined),
-    refresh_token: (grantData.refresh_token ? new Token(grantData.refresh_token) : undefined),
-    id_token: (grantData.id_token ? new Token(grantData.id_token) : undefined),
+    access_token: grantData.access_token
+      ? new Token(grantData.access_token, this.clientId)
+      : undefined,
+    refresh_token: grantData.refresh_token
+      ? new Token(grantData.refresh_token)
+      : undefined,
+    id_token: grantData.id_token ? new Token(grantData.id_token) : undefined,
     expires_in: grantData.expires_in,
     token_type: grantData.token_type,
-    __raw: rawData
+    __raw: rawData,
   });
 
   if (this.isGrantRefreshable(grant)) {
     return new Promise((resolve, reject) => {
       this.ensureFreshness(grant)
-        .then(g => this.validateGrant(g))
-        .then(g => resolve(g))
-        .catch(err => reject(err));
+        .then((g) => this.validateGrant(g))
+        .then((g) => resolve(g))
+        .catch((err) => reject(err));
     });
   } else {
     return this.validateGrant(grant);
@@ -372,32 +425,36 @@ GrantManager.prototype.createGrant = function createGrant (rawData) {
  * @return {Promise} That resolves to a validated grant or
  * rejects with an error if any of the tokens are invalid.
  */
-GrantManager.prototype.validateGrant = function validateGrant (grant) {
+GrantManager.prototype.validateGrant = function validateGrant(grant) {
   var self = this;
   const validateGrantToken = (grant, tokenName, expectedType) => {
     return new Promise((resolve, reject) => {
-    // check the access token
-      this.validateToken(grant[tokenName], expectedType).then(token => {
-        grant[tokenName] = token;
-        resolve();
-      }).catch((err) => {
-        reject(new Error('Grant validation failed. Reason: ' + err.message));
-      });
+      // check the access token
+      this.validateToken(grant[tokenName], expectedType)
+        .then((token) => {
+          grant[tokenName] = token;
+          resolve();
+        })
+        .catch((err) => {
+          reject(new Error("Grant validation failed. Reason: " + err.message));
+        });
     });
   };
   return new Promise((resolve, reject) => {
     var promises = [];
-    promises.push(validateGrantToken(grant, 'access_token', 'Bearer'));
+    promises.push(validateGrantToken(grant, "access_token", "Bearer"));
     if (!self.bearerOnly) {
       if (grant.id_token) {
-        promises.push(validateGrantToken(grant, 'id_token', 'ID'));
+        promises.push(validateGrantToken(grant, "id_token", "ID"));
       }
     }
-    Promise.all(promises).then(() => {
-      resolve(grant);
-    }).catch((err) => {
-      reject(new Error(err.message));
-    });
+    Promise.all(promises)
+      .then(() => {
+        resolve(grant);
+      })
+      .catch((err) => {
+        reject(new Error(err.message));
+      });
   });
 };
 
@@ -412,70 +469,96 @@ GrantManager.prototype.validateGrant = function validateGrant (grant) {
  *
  * @return {Promise} That resolve a token
  */
-GrantManager.prototype.validateToken = function validateToken (token, expectedType) {
+GrantManager.prototype.validateToken = function validateToken(
+  token,
+  expectedType
+) {
   return new Promise((resolve, reject) => {
     if (!token) {
-      reject(new Error('invalid token (missing)'));
+      reject(new Error("invalid token (missing)"));
     } else if (token.isExpired()) {
-      reject(new Error('invalid token (expired)'));
+      reject(new Error("invalid token (expired)"));
     } else if (!token.signed) {
-      reject(new Error('invalid token (not signed)'));
+      reject(new Error("invalid token (not signed)"));
     } else if (token.content.typ !== expectedType) {
-      reject(new Error('invalid token (wrong type)'));
+      reject(new Error("invalid token (wrong type)"));
     } else if (token.content.iat < this.notBefore) {
-      reject(new Error('invalid token (stale token)'));
-    } else if (token.content.iss !== this.realmUrl) {
-      reject(new Error('invalid token (wrong ISS)'));
+      reject(new Error("invalid token (stale token)"));
+    } else if (
+      process.env.NODE_ENV === "production" &&
+      token.content.iss !== this.realmUrl
+    ) {
+      reject(
+        new Error(
+          "invalid token (wrong ISS) " + token.content.iss + " " + this.realmUrl
+        )
+      );
     } else {
-      var audienceData = Array.isArray(token.content.aud) ? token.content.aud : [token.content.aud];
-      if (expectedType === 'ID') {
+      var audienceData = Array.isArray(token.content.aud)
+        ? token.content.aud
+        : [token.content.aud];
+      if (expectedType === "ID") {
         if (!audienceData.includes(this.clientId)) {
-          reject(new Error('invalid token (wrong audience)'));
+          reject(new Error("invalid token (wrong audience)"));
         }
         if (token.content.azp && token.content.azp !== this.clientId) {
-          reject(new Error('invalid token (authorized party should match client id)'));
+          reject(
+            new Error("invalid token (authorized party should match client id)")
+          );
         }
       } else if (this.verifyTokenAudience) {
         if (!audienceData.includes(this.clientId)) {
-          reject(new Error('invalid token (wrong audience)'));
+          reject(new Error("invalid token (wrong audience)"));
         }
       }
-      const verify = crypto.createVerify('RSA-SHA256');
+      const verify = crypto.createVerify("RSA-SHA256");
       // if public key has been supplied use it to validate token
       if (this.publicKey) {
         try {
           verify.update(token.signed);
-          if (!verify.verify(this.publicKey, token.signature, 'base64')) {
-            reject(new Error('invalid token (signature)'));
+          if (!verify.verify(this.publicKey, token.signature, "base64")) {
+            reject(new Error("invalid token (signature)"));
           } else {
             resolve(token);
           }
         } catch (err) {
-          reject(new Error('Misconfigured parameters while validating token. Check your keycloak.json file!'));
+          reject(
+            new Error(
+              "Misconfigured parameters while validating token. Check your keycloak.json file!"
+            )
+          );
         }
       } else {
         // retrieve public KEY and use it to validate token
-        this.rotation.getJWK(token.header.kid).then(key => {
-          verify.update(token.signed);
-          if (!verify.verify(key, token.signature)) {
-            reject(new Error('invalid token (public key signature)'));
-          } else {
-            resolve(token);
-          }
-        }).catch((err) => {
-          reject(new Error('failed to load public key to verify token. Reason: ' + err.message));
-        });
+        this.rotation
+          .getJWK(token.header.kid)
+          .then((key) => {
+            verify.update(token.signed);
+            if (!verify.verify(key, token.signature)) {
+              reject(new Error("invalid token (public key signature)"));
+            } else {
+              resolve(token);
+            }
+          })
+          .catch((err) => {
+            reject(
+              new Error(
+                "failed to load public key to verify token. Reason: " +
+                  err.message
+              )
+            );
+          });
       }
     }
   });
 };
 
 const getProtocol = (opts) => {
-  return opts.protocol === 'https:' ? https : http;
+  return opts.protocol === "https:" ? https : http;
 };
 
 const nodeify = (promise, cb) => {
-  if (typeof cb !== 'function') return promise;
+  if (typeof cb !== "function") return promise;
   return promise.then((res) => cb(null, res)).catch((err) => cb(err));
 };
 
@@ -488,7 +571,8 @@ const createHandler = (manager) => (resolve, reject, json) => {
 };
 
 const refreshHandler = (manager, grant) => (resolve, reject, json) => {
-  manager.createGrant(json)
+  manager
+    .createGrant(json)
     .then((grant) => resolve(grant))
     .catch((err) => reject(err));
 };
@@ -500,37 +584,44 @@ const validationHandler = (manager, token) => (resolve, reject, json) => {
 };
 
 const postOptions = (manager, path) => {
-  const realPath = path || '/protocol/openid-connect/token';
+  const realPath = path || "/protocol/openid-connect/token";
   const opts = URL.parse(manager.realmUrl + realPath);
   opts.headers = {
-    'Content-Type': 'application/x-www-form-urlencoded',
-    'X-Client': 'keycloak-nodejs-connect'
+    "Content-Type": "application/x-www-form-urlencoded",
+    "X-Client": "keycloak-nodejs-connect",
   };
   if (!manager.public) {
-    opts.headers.Authorization = 'Basic ' + Buffer.from(manager.clientId + ':' + manager.secret).toString('base64');
+    opts.headers.Authorization =
+      "Basic " +
+      Buffer.from(manager.clientId + ":" + manager.secret).toString("base64");
   }
-  opts.method = 'POST';
+  opts.method = "POST";
   return opts;
 };
 
 const fetch = (manager, handler, options, params) => {
   return new Promise((resolve, reject) => {
-    const data = (typeof params === 'string' ? params : querystring.stringify(params));
-    options.headers['Content-Length'] = data.length;
+    const data =
+      typeof params === "string" ? params : querystring.stringify(params);
+    options.headers["Content-Length"] = data.length;
 
     const req = getProtocol(options).request(options, (response) => {
       if (response.statusCode < 200 || response.statusCode > 299) {
-        return reject(new Error(response.statusCode + ':' + http.STATUS_CODES[ response.statusCode ]));
+        return reject(
+          new Error(
+            response.statusCode + ":" + http.STATUS_CODES[response.statusCode]
+          )
+        );
       }
-      let json = '';
-      response.on('data', (d) => (json += d.toString()));
-      response.on('end', () => {
+      let json = "";
+      response.on("data", (d) => (json += d.toString()));
+      response.on("end", () => {
         handler(resolve, reject, json);
       });
     });
 
     req.write(data);
-    req.on('error', reject);
+    req.on("error", reject);
     req.end();
   });
 };
